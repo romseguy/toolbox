@@ -3,7 +3,9 @@
 ## linux
 
 https://github.com/romseguy/dotfiles
+
 https://github.com/romseguy/config
+
 https://github.com/romseguy/Executables
 
 ## starters
