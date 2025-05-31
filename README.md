@@ -29,3 +29,7 @@ https://www.11ty.dev/docs/
 ## web components
 
 https://github.com/zachleat/browser-window
+
+## wp
+
+https://github.com/romseguy/scripts/blob/main/fixwperm.sh
