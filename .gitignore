@@ -1,0 +1,14 @@
+# Build
+
+tsconfig.tsbuildinfo
+
+# Dependency directories
+
+node_modules/
+
+# Dotfiles
+
+# Package managers
+
+# Public
+
