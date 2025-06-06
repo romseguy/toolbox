@@ -1,0 +1,25 @@
+# Build
+
+.next/
+.swc/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# Dependency directories
+
+node_modules/
+
+# Dotfiles
+
+.env*
+
+# Package managers
+
+# Public
+
+**/public/files/**
+**/public/workbox-*.js
+**/public/sw.js
+**/public/sw.js.map
+**/public/worker-*.js
+**/public/workbox-*.js.map

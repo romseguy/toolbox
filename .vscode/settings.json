@@ -1,0 +1,9 @@
+{
+  "files.exclude": {
+    "LICENSE": true,
+    "pnpm-lock.yaml": true,
+    "yarn.lock": true,
+    "**/.git": true,
+    "tsconfig.tsbuildinfo": true
+  }
+}

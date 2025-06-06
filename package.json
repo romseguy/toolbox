@@ -1,0 +1,66 @@
+{
+  "name": "dir-list",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "yarn@1.22.22",
+  "scripts": {
+    "dev": "kill-port --port 8000 && yarn dev:server && yarn dev:next",
+    "dev:server": "cd ~/MEGA/sauvegarder && ~/env/bin/python -m http.server &",
+    "dev:next": "next",
+    "lint": "next lint",
+    "build": "next build",
+    "start": "NODE_OPTIONS='http-server-default-timeout=0' next start -p 8000",
+    "browserslist": "ynpx update-browserslist-db@latest"
+  },
+  "dependencies": {
+    "@chakra-ui/icons": "1.1.7",
+    "@chakra-ui/react": "1.8.9",
+    "@emotion/react": "11.11.1",
+    "@emotion/styled": "11.11.0",
+    "@hapi/iron": "5.1.4",
+    "@hookform/error-message": "2.0.0",
+    "@magic-ext/oauth": "2.1.1",
+    "@magic-sdk/admin": "1.10.1",
+    "@reduxjs/toolkit": "1.9.7",
+    "autoprefixer": "10.4.21",
+    "bcryptjs": "2.4.3",
+    "cookie": "0.5.0",
+    "framer-motion": "6.5.1",
+    "kill-port": "^2.0.1",
+    "magic-sdk": "8.1.1",
+    "mongodb": "4.4.0",
+    "mongoose": "5.13.19",
+    "next": "12.2.0",
+    "next-connect": "0.10.1",
+    "next-redux-wrapper": "7.0.5",
+    "postcss": "8.5.3",
+    "react": "17.0.2",
+    "react-dom": "17.0.2",
+    "react-hook-form": "6.8.2",
+    "react-icons": "4.2.0",
+    "react-redux": "7.2.4",
+    "redux": "4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "15.12.2",
+    "@types/react": "17.0.11",
+    "eslint": "8.57.1",
+    "eslint-config-next": "15.4.0-canary.51",
+    "typescript": "4.9.5"
+  },
+  "browserslist": {
+    "production": [
+      "chrome 64",
+      "edge 79",
+      "firefox 67",
+      "opera 51",
+      "safari 12"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
