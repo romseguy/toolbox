@@ -1,4 +1,6 @@
 import { useDebouncedCallback } from "@charlietango/hooks/use-debounced-callback";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { pdfjs } from "react-pdf";
@@ -56,9 +58,15 @@ function extractText(file: File | null) {
     pdfToText(file)
       .then((text) => console.log(text))
       .catch((error) =>
-        console.error("Failed to extract text from pdf", error)
+        console.error("Failed to extract text from pdf", error),
       );
 }
+
+const fullDateString = (date: Date) => {
+  return format(date, "eeee dd MMMM yyyy à H'h'mm", {
+    locale: fr,
+  });
+};
 
 function App() {
   const debouncedCallback = useDebouncedCallback(() => {
@@ -107,10 +115,31 @@ function App() {
       <div style={{ marginTop: "12px" }}>
         <button
           onClick={async () => {
-            var bl = new Blob([html], { type: "text/html" });
+            var bl = new Blob(
+              [
+                `<html>
+              <head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><link rel="stylesheet" type="text/css" href="./spectral.css"><style type="text/css">
+      body {
+        font-family: 'Spectral', Georgia, ui-serif, serif;
+        font-size: 19px;
+        text-align: justify;
+      }
+      hr {
+        border-top-width: 3px;
+        margin: 0 24px;
+      }
+      p {
+        margin: 0;
+        padding: 0;
+      }
+    </style></head>
+              <body>${html}</body></html>`,
+              ],
+              { type: "text/html" },
+            );
             var a = document.createElement("a");
             a.href = URL.createObjectURL(bl);
-            a.download = "d.html";
+            a.download = `${fullDateString(new Date())}.html`;
             a.hidden = true;
             document.body.appendChild(a);
             a.click();
@@ -126,7 +155,7 @@ function App() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
-  </StrictMode>
+  </StrictMode>,
 );
 
 {

@@ -1,5 +1,8 @@
 # Build
 
+.next
+next-env.d.ts
+.swc
 tsconfig.tsbuildinfo
 
 # Dependency directories
@@ -7,6 +10,9 @@ tsconfig.tsbuildinfo
 node_modules/
 
 # Dotfiles
+
+.vscode
+.env*
 
 # Package managers
 
