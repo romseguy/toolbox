@@ -108,7 +108,7 @@ export const RTEditor = ({
       }
     `,
     convert_urls: false,
-    document_base_url: "http://localhost:3000/",
+    document_base_url: import.meta.env.VITE_PUBLIC_URL,
     font_css: "/fonts/spectral.css",
     //font_family_formats: "Spectral",
     font_family_formats:
