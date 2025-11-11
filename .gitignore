@@ -1,4 +1,20 @@
-.env
+# Build
+
 .next
-node_modules
+next-env.d.ts
+.swc
 tsconfig.tsbuildinfo
+
+# Dependency directories
+
+node_modules/
+
+# Dotfiles
+
+.vscode
+.env*
+
+# Package managers
+
+# Public
+
