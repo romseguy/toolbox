@@ -1,10 +1,21 @@
-import { useDebouncedCallback } from "@charlietango/hooks/use-debounced-callback";
-import { StrictMode, useEffect, useState } from "react";
+import {
+  Alert,
+  AlertIcon,
+  Badge,
+  Box,
+  Flex,
+  Image,
+  Link,
+  Spinner,
+} from "@chakra-ui/react";
+import { StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./App.css";
 import { divideArray, hasItems } from "./array";
-import { Flex, Image } from "@chakra-ui/react";
 import { client } from "./client";
+import * as stringUtils from "./string";
+import { ThemeProvider } from "./ThemeProvider";
+import { pxBreakpoints } from "./theme";
 
 const controller = new AbortController();
 const signal = controller.signal;
@@ -23,31 +34,58 @@ export interface RemoteFile {
 export interface RemoteImage extends RemoteFile {
   height: number;
   width: number;
-  type?: string;
   cached?: boolean;
 }
 
-export const breakpoints = {
-  sm: "28em",
-  md: "40em",
-  lg: "52em",
-  xl: "64em",
-  "2xl": "80em",
-  nav: "1003px",
-};
-
-export const pxBreakpoints = {
-  sm: 448,
-  md: 640,
-  lg: 832,
-  xl: 1024,
-  "2xl": 1280,
-};
-
 function App() {
-  //#region column count relative to screen width
+  const isFetching = false;
+  const isLoading = false;
+
   const [screenWidth, setScreenWidth] = useState(0);
+  useEffect(() => {
+    const updateScreenWidth = () => {
+      const newScreenWidth = window.innerWidth - 15;
+      if (newScreenWidth !== screenWidth) setScreenWidth(newScreenWidth);
+    };
+
+    updateScreenWidth();
+    window.addEventListener("resize", updateScreenWidth);
+    signal.addEventListener("abort", () => {
+      window.removeEventListener("resize", updateScreenWidth);
+    });
+  }, []);
+
   const [images, setImages] = useState<RemoteImage[]>([]);
+  const [imagesSize, setImagesSize] = useState(0);
+  useEffect(() => {
+    (async () => {
+      const url = new URL(
+        "https://api.romseguy.com/?orgId=64d0a600d9222e2015596ec9",
+      );
+      const res = await client.get<RemoteFile[]>(url.toString());
+      if (res.data && hasItems(res.data)) {
+        let count = 0;
+        let arr: RemoteImage[] = [];
+        let data = res.data.filter(
+          ({ mime }) => !!mime && mime.includes("image"),
+        ) as RemoteImage[];
+
+        for (const file of data) {
+          count += file.bytes;
+          arr.push({
+            ...file,
+            url: `http://138.68.66.61/64d0a600d9222e2015596ec9/${encodeURIComponent(
+              file.url,
+            )}`,
+          });
+        }
+
+        setImages(arr.sort((a, b) => (a.time < b.time ? 1 : -1)));
+        setImagesSize(count);
+      }
+    })();
+  }, []);
+
   const [columnCount, setColumnCount] = useState<number>(1);
   useEffect(() => {
     const getColumnCount = () => {
@@ -64,9 +102,7 @@ function App() {
     const col = getColumnCount();
     if (col !== columnCount) setColumnCount(col);
   }, [images, screenWidth]);
-  //#endregion
 
-  //#region masonry state
   const [currentIndex, setCurrentIndex] = useState(0);
   const pageImageCount = 10;
   const pagesCount =
@@ -74,101 +110,147 @@ function App() {
   //const pageLength = images.length / pagesCount;
   const pages = divideArray(images, pagesCount);
   const masonry = divideArray<RemoteImage>(
-    pages.reduce(
-      (arr, page, index) => (index <= currentIndex ? arr.concat(page) : arr),
-      [],
-    ),
+    pages.reduce((arr, page, index) => {
+      return arr.concat(page);
+      //return index <= currentIndex ? arr.concat(page) : arr
+    }, []),
     columnCount,
   );
-  //#endregion
-
-  const debouncedCallback = useDebouncedCallback(() => {
-    console.log("called after 1000ms");
-    const updateScreenWidth = () => {
-      const newScreenWidth = window.innerWidth - 15;
-      if (newScreenWidth !== screenWidth) setScreenWidth(newScreenWidth);
-    };
-
-    updateScreenWidth();
-    window.addEventListener("resize", updateScreenWidth);
-    signal.addEventListener("abort", () => {
-      window.removeEventListener("resize", updateScreenWidth);
-    });
-  }, 1000);
-
-  useEffect(() => {
-    (async () => {
-      const url = new URL(
-        "https://api.romseguy.com/?orgId=64d0a600d9222e2015596ec9",
-      );
-      const res = await client.get(url.toString());
-      console.log("🚀 ~ res:", res);
-    })();
-
-    debouncedCallback();
-  }, []);
-
   return (
-    <>
-      {masonry.map((column, index) => {
-        console.log("🚀 ~ {masonry.map ~ column:", column);
-        return (
-          <Flex key={index} flexDirection="column" width="100%">
-            {column.map((image, imageIndex) => {
-              let marginAround = 2 * (4 * 12 + 24);
-              const marginBetween = (columnCount - 1) * 24;
-              let newMW = screenWidth - marginAround;
+    <Box>
+      <Flex alignItems="center" p={3}>
+        <h1>{images.length} images</h1>
+        <Badge variant="subtle" colorScheme="green" ml={1}>
+          {stringUtils.bytesForHuman(imagesSize)}
+        </Badge>
+      </Flex>
 
-              if (screenWidth > pxBreakpoints["2xl"]) {
-                marginAround = 2 * (5 * 12 + 20 + 84);
-                newMW =
-                  (screenWidth - marginAround - marginBetween) / columnCount;
-                // console.log(
-                //   "1",
-                //   columnCount,
-                //   screenWidth,
-                //   newMW,
-                //   marginAround,
-                //   marginBetween
-                // );
-              } else if (columnCount !== 1) {
-                marginAround = 2 * (4 * 12 + 20);
-                newMW =
-                  (screenWidth - marginAround - marginBetween) / columnCount;
-              }
+      {isLoading || isFetching ? (
+        <Spinner m={3} />
+      ) : !hasItems(images) ? (
+        <Alert status="info">
+          <AlertIcon />
+          Aucune images.
+        </Alert>
+      ) : (
+        !!columnCount && (
+          <>
+            <Flex justifyContent="center">
+              {masonry.map((column, index) => {
+                return (
+                  <Flex key={index} flexDirection="column" width="100%">
+                    {column.map((image, columnIndex) => {
+                      let marginAround = 2 * (4 * 12 + 24);
+                      const marginBetween = (columnCount - 1) * 24;
+                      let newMW = screenWidth - marginAround;
 
-              const width = image.width > newMW ? newMW : image.width;
+                      if (screenWidth > pxBreakpoints["2xl"]) {
+                        marginAround = 2 * (5 * 12 + 20 + 84);
+                        newMW =
+                          (screenWidth - marginAround - marginBetween) /
+                          columnCount;
+                        // console.log(
+                        //   "1",
+                        //   columnCount,
+                        //   screenWidth,
+                        //   newMW,
+                        //   marginAround,
+                        //   marginBetween
+                        // );
+                      } else if (columnCount !== 1) {
+                        marginAround = 2 * (4 * 12 + 20);
+                        newMW =
+                          (screenWidth - marginAround - marginBetween) /
+                          columnCount;
+                      }
 
-              return (
-                <Image
-                  key={`image-${imageIndex}`}
-                  //ref={imageRefs[image.url]}
-                  src={image.url}
-                  width={`${width}px`}
-                  borderRadius="12px"
-                  cursor="pointer"
-                  mb={3}
-                  mx={3}
-                  // onClick={() => {
-                  //   onOpen(image);
-                  // }}
-                  // onLoad={() => {
-                  //   if (!isLoaded[image.url])
-                  //     setIsLoaded({ [image.url]: true });
-                  // }}
-                />
-              );
-            })}
-          </Flex>
-        );
-      })}
-    </>
+                      const width = image.width > newMW ? newMW : image.width;
+                      const currentIndex = images.findIndex(
+                        ({ url }) => url === image.url,
+                      );
+
+                      return (
+                        <>
+                          <Box style={{ float: "left" }}>{currentIndex}</Box>
+                          <Link href={image.url} isExternal>
+                            <Image
+                              key={`image-${columnIndex}`}
+                              //ref={imageRefs[image.url]}
+                              src={image.url}
+                              width={`${width}px`}
+                              borderRadius="12px"
+                              cursor="pointer"
+                              mb={3}
+                              mx={3}
+                              onClick={() => {
+                                //onOpen(image);
+                              }}
+                              // onLoad={() => {
+                              //   if (!isLoaded[image.url])
+                              //     setIsLoaded({ [image.url]: true });
+                              // }}
+                            />
+                          </Link>
+                        </>
+                      );
+                    })}
+                  </Flex>
+                );
+              })}
+            </Flex>
+
+            {/* {Array.isArray(pages[currentIndex + 1]) && (
+              <Button
+                onClick={() => {
+                  setCurrentIndex(currentIndex + 1);
+                }}
+              >
+                Charger les images suivantes{" "}
+                <Badge colorScheme="teal">
+                  {stringUtils.bytesForHuman(
+                    pages[currentIndex + 1].reduce((sum, cur) => {
+                      return sum + cur.bytes;
+                    }, 0),
+                  )}
+                </Badge>
+              </Button>
+            )} */}
+          </>
+        )
+      )}
+
+      {/* {modalState.isOpen && modalState.image && (
+        <FullscreenModal
+          //header={modalState.image.url.match(/[^=]+$/)![0]}
+          header={
+            <HStack>
+              <FaImage />
+              <Text>
+                {modalState.image.url.substring(
+                  modalState.image.url.lastIndexOf("/") + 1
+                )}
+              </Text>
+            </HStack>
+          }
+          bodyProps={{ bg: "black" }}
+          onClose={onClose}
+        >
+          <Image
+            alignSelf="center"
+            src={modalState.image.url}
+            width={`${modalState.image.width}px`}
+          />
+        </FullscreenModal>
+      )} */}
+    </Box>
   );
 }
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
   </StrictMode>,
 );
 
@@ -190,5 +272,13 @@ createRoot(document.getElementById("root")!).render(
 //   const workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${reactPdf.pdfjs.version}/pdf.worker.min.mjs`;
 //   reactPdf.pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 // }
+  */
+}
+
+{
+  /*
+  const debouncedCallback = useDebouncedCallback(() => {
+    console.log("called after 1000ms");
+  }, 1000);
   */
 }
