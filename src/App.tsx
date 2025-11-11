@@ -1,153 +1,167 @@
 import { useDebouncedCallback } from "@charlietango/hooks/use-debounced-callback";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { pdfjs } from "react-pdf";
-import { RTEditor } from "./RTEditor";
 import "./App.css";
+import { divideArray, hasItems } from "./array";
+import { Flex, Image } from "@chakra-ui/react";
+import { client } from "./client";
 
-pdfjs.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.js";
+const controller = new AbortController();
+const signal = controller.signal;
 
-const pdfToText = async (file: File | Blob | MediaSource): Promise<string> => {
-  // Create a blob URL for the PDF file
-  const blobUrl = URL.createObjectURL(file);
-
-  // Load the PDF file
-  //const reactPdf = require("react-pdf");
-  //const loadingTask = reactPdf.getDocument(blobUrl);
-
-  const loadingTask = pdfjs.getDocument(blobUrl);
-
-  let extractedText = "";
-  try {
-    const pdf = await loadingTask.promise;
-    //const numPages = pdf.numPages;
-    const numPages = 1;
-
-    // Iterate through each page and extract text
-    for (let pageNumber = 1; pageNumber <= numPages; pageNumber++) {
-      const page = await pdf.getPage(pageNumber);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        //.map((item) => ("str" in item ? item.str : ""))
-        .map((item) => {
-          console.log("🚀 ~ .map ~ item:", item);
-          if (item.hasEOL && item.height === 0) return "\n";
-          return item.str;
-        })
-        .join(" ");
-      extractedText += pageText;
-    }
-  } catch (error) {
-    throw new Error(`Failed to extract text from PDF: ${error}`);
-  } finally {
-    // Clean up the blob URL
-    URL.revokeObjectURL(blobUrl);
-
-    // Free memory from loading task
-    loadingTask.destroy();
-  }
-
-  return extractedText;
-};
-
-function extractText(file: File | null) {
-  if (file)
-    pdfToText(file)
-      .then((text) => console.log(text))
-      .catch((error) =>
-        console.error("Failed to extract text from pdf", error),
-      );
+export interface RemoteFile {
+  bytes: number;
+  hUnits: string;
+  wUnits: string;
+  mime: string;
+  type: string;
+  url: string;
+  width: number;
+  time?: number;
 }
 
-const fullDateString = (date: Date) => {
-  return format(date, "eeee dd MMMM yyyy à H'h'mm", {
-    locale: fr,
-  });
+export interface RemoteImage extends RemoteFile {
+  height: number;
+  width: number;
+  type?: string;
+  cached?: boolean;
+}
+
+export const breakpoints = {
+  sm: "28em",
+  md: "40em",
+  lg: "52em",
+  xl: "64em",
+  "2xl": "80em",
+  nav: "1003px",
+};
+
+export const pxBreakpoints = {
+  sm: 448,
+  md: 640,
+  lg: 832,
+  xl: 1024,
+  "2xl": 1280,
 };
 
 function App() {
+  //#region column count relative to screen width
+  const [screenWidth, setScreenWidth] = useState(0);
+  const [images, setImages] = useState<RemoteImage[]>([]);
+  const [columnCount, setColumnCount] = useState<number>(1);
+  useEffect(() => {
+    const getColumnCount = () => {
+      let col = 1;
+      if (hasItems(images) && screenWidth) {
+        if (screenWidth >= pxBreakpoints.xl)
+          col = images.length >= 4 ? 4 : images.length;
+        else if (screenWidth >= pxBreakpoints.lg) col = 3;
+        else if (screenWidth >= pxBreakpoints.md) col = 2;
+        else col = 1;
+      }
+      return col;
+    };
+    const col = getColumnCount();
+    if (col !== columnCount) setColumnCount(col);
+  }, [images, screenWidth]);
+  //#endregion
+
+  //#region masonry state
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const pageImageCount = 10;
+  const pagesCount =
+    images.length > pageImageCount ? images.length % pageImageCount : 1;
+  //const pageLength = images.length / pagesCount;
+  const pages = divideArray(images, pagesCount);
+  const masonry = divideArray<RemoteImage>(
+    pages.reduce(
+      (arr, page, index) => (index <= currentIndex ? arr.concat(page) : arr),
+      [],
+    ),
+    columnCount,
+  );
+  //#endregion
+
   const debouncedCallback = useDebouncedCallback(() => {
     console.log("called after 1000ms");
+    const updateScreenWidth = () => {
+      const newScreenWidth = window.innerWidth - 15;
+      if (newScreenWidth !== screenWidth) setScreenWidth(newScreenWidth);
+    };
+
+    updateScreenWidth();
+    window.addEventListener("resize", updateScreenWidth);
+    signal.addEventListener("abort", () => {
+      window.removeEventListener("resize", updateScreenWidth);
+    });
   }, 1000);
+
   useEffect(() => {
+    (async () => {
+      const url = new URL(
+        "https://api.romseguy.com/?orgId=64d0a600d9222e2015596ec9",
+      );
+      const res = await client.get(url.toString());
+      console.log("🚀 ~ res:", res);
+    })();
+
     debouncedCallback();
   }, []);
 
-  const [html, setHtml] = useState("");
-
   return (
     <>
-      <div style={{ marginBottom: "24px" }}>
-        <input
-          type="file"
-          id="pdf"
-          accept="application/pdf"
-          onChange={(e) =>
-            extractText(e.target.files ? e.target.files[0] : null)
-          }
-        />
-        <label htmlFor="pdf">PDF</label>
-      </div>
+      {masonry.map((column, index) => {
+        console.log("🚀 ~ {masonry.map ~ column:", column);
+        return (
+          <Flex key={index} flexDirection="column" width="100%">
+            {column.map((image, imageIndex) => {
+              let marginAround = 2 * (4 * 12 + 24);
+              const marginBetween = (columnCount - 1) * 24;
+              let newMW = screenWidth - marginAround;
 
-      <div style={{ marginBottom: "24px" }}>
-        <input
-          type="file"
-          id="html"
-          accept="text/html"
-          onChange={async (e) => {
-            const file = e.target.files ? e.target.files[0] : null;
-            if (file) setHtml(await file.text());
-          }}
-        />
-        <label htmlFor="html">HTML</label>
-      </div>
+              if (screenWidth > pxBreakpoints["2xl"]) {
+                marginAround = 2 * (5 * 12 + 20 + 84);
+                newMW =
+                  (screenWidth - marginAround - marginBetween) / columnCount;
+                // console.log(
+                //   "1",
+                //   columnCount,
+                //   screenWidth,
+                //   newMW,
+                //   marginAround,
+                //   marginBetween
+                // );
+              } else if (columnCount !== 1) {
+                marginAround = 2 * (4 * 12 + 20);
+                newMW =
+                  (screenWidth - marginAround - marginBetween) / columnCount;
+              }
 
-      <RTEditor
-        defaultValue={html}
-        onChange={async (e) => {
-          setHtml(e.html);
-        }}
-      />
+              const width = image.width > newMW ? newMW : image.width;
 
-      <div style={{ marginTop: "12px" }}>
-        <button
-          onClick={async () => {
-            var bl = new Blob(
-              [
-                `<html>
-              <head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><link rel="stylesheet" type="text/css" href="./spectral.css"><style type="text/css">
-      body {
-        font-family: 'Spectral', Georgia, ui-serif, serif;
-        font-size: 19px;
-        text-align: justify;
-      }
-      hr {
-        border-top-width: 3px;
-        margin: 0 24px;
-      }
-      p {
-        margin: 0;
-        padding: 0;
-      }
-    </style></head>
-              <body>${html}</body></html>`,
-              ],
-              { type: "text/html" },
-            );
-            var a = document.createElement("a");
-            a.href = URL.createObjectURL(bl);
-            a.download = `${fullDateString(new Date())}.html`;
-            a.hidden = true;
-            document.body.appendChild(a);
-            a.click();
-          }}
-        >
-          Save
-        </button>
-      </div>
+              return (
+                <Image
+                  key={`image-${imageIndex}`}
+                  //ref={imageRefs[image.url]}
+                  src={image.url}
+                  width={`${width}px`}
+                  borderRadius="12px"
+                  cursor="pointer"
+                  mb={3}
+                  mx={3}
+                  // onClick={() => {
+                  //   onOpen(image);
+                  // }}
+                  // onLoad={() => {
+                  //   if (!isLoaded[image.url])
+                  //     setIsLoaded({ [image.url]: true });
+                  // }}
+                />
+              );
+            })}
+          </Flex>
+        );
+      })}
     </>
   );
 }
