@@ -8,6 +8,8 @@ https://github.com/romseguy/dotfiles
 
 https://github.com/romseguy/config
 
+https://github.com/romseguy/scripts
+
 ## starters
 
 https://github.com/romseguy/starter-client-app
