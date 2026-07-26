@@ -12,9 +12,7 @@ https://github.com/romseguy/scripts
 
 ## starters
 
-https://github.com/romseguy/starter-client-app
-
-https://github.com/romseguy/starter-mobx-state-tree
+https://github.com/romseguy/auth
 
 ## ts
 
